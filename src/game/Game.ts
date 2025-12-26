@@ -1,4 +1,9 @@
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { ChristmasTree } from './entities/ChristmasTree';
+import { Cat } from './entities/Cat';
+import { Star } from './entities/Star';
+import { Ornament, OrnamentPool } from './entities/Ornament';
 
 /**
  * Clase principal del juego
@@ -12,9 +17,14 @@ export class Game {
   private camera: THREE.PerspectiveCamera;
   private clock: THREE.Clock;
   private isRunning: boolean = false;
+  private controls: OrbitControls | null = null;
 
-  // Cubo de prueba (temporal)
-  private testCube: THREE.Mesh | null = null;
+  // Entidades del juego
+  private tree: ChristmasTree | null = null;
+  private cat: Cat | null = null;
+  private star: Star | null = null;
+  private ornamentPool: OrnamentPool | null = null;
+  private ornaments: Ornament[] = [];
 
   constructor(container: HTMLElement, uiContainer: HTMLElement) {
     this.container = container;
@@ -46,7 +56,8 @@ export class Game {
       0.1,
       1000
     );
-    this.camera.position.z = 5;
+    this.camera.position.set(0, 6, 12);
+    this.camera.lookAt(0, 5, 0);
 
     // Manejar resize
     window.addEventListener('resize', this.onResize.bind(this));
@@ -58,8 +69,11 @@ export class Game {
   async init(): Promise<void> {
     console.log('🎄 Iniciando Christmas Cat Game...');
 
-    // Crear escena de prueba
-    this.createTestScene();
+    // Crear escena con entidades
+    this.createGameScene();
+
+    // Agregar controles de órbita para desarrollo
+    this.setupDevControls();
 
     // Iniciar loop de renderizado
     this.isRunning = true;
@@ -69,43 +83,74 @@ export class Game {
   }
 
   /**
-   * Crear escena de prueba con un cubo rotando
-   * (Se reemplazará con las escenas reales)
+   * Configurar controles de desarrollo (OrbitControls)
    */
-  private createTestScene(): void {
+  private setupDevControls(): void {
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.05;
+    this.controls.target.set(0, 5, 0);
+    this.controls.update();
+  }
+
+  /**
+   * Crear escena principal del juego con todas las entidades
+   */
+  private createGameScene(): void {
     // Luz ambiental
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     this.scene.add(ambientLight);
 
-    // Luz direccional (simula luz navideña cálida)
-    const directionalLight = new THREE.DirectionalLight(0xffd700, 1);
-    directionalLight.position.set(5, 10, 7);
+    // Luz direccional principal
+    const directionalLight = new THREE.DirectionalLight(0xfff5e6, 1);
+    directionalLight.position.set(5, 15, 10);
     directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 50;
     this.scene.add(directionalLight);
 
-    // Cubo de prueba (representa futuro árbol/gatito)
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xcc0000, // Rojo navideño
-      metalness: 0.3,
-      roughness: 0.7,
-    });
-    this.testCube = new THREE.Mesh(geometry, material);
-    this.testCube.castShadow = true;
-    this.scene.add(this.testCube);
+    // Luz de relleno
+    const fillLight = new THREE.DirectionalLight(0x88ccff, 0.3);
+    fillLight.position.set(-5, 5, -5);
+    this.scene.add(fillLight);
 
-    // Esfera decorativa (globo navideño)
-    const sphereGeometry = new THREE.SphereGeometry(0.3, 32, 32);
-    const sphereMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffd700, // Dorado
-      metalness: 0.8,
-      roughness: 0.2,
+    // Suelo
+    const floorGeometry = new THREE.PlaneGeometry(20, 20);
+    const floorMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2d1810,
+      roughness: 0.8,
     });
-    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    sphere.position.set(1.5, 0, 0);
-    this.scene.add(sphere);
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    this.scene.add(floor);
 
-    // Texto de estado en UI
+    // Crear árbol de navidad
+    this.tree = new ChristmasTree();
+    this.scene.add(this.tree.mesh);
+
+    // Crear estrella en la cima
+    this.star = new Star();
+    const topPos = this.tree.getTopPosition();
+    this.star.setPosition(topPos.x, topPos.y + 0.5, topPos.z);
+    this.scene.add(this.star.mesh);
+
+    // Crear gatito
+    this.cat = new Cat();
+    const startPos = this.tree.getCatPosition(0, 'left');
+    if (startPos) {
+      this.cat.setPosition(startPos.x, startPos.y, startPos.z);
+    }
+    this.cat.lookAt('right');
+    this.scene.add(this.cat.mesh);
+
+    // Crear pool de globos y añadir algunos
+    this.ornamentPool = new OrnamentPool();
+    this.addOrnaments();
+
+    // UI de desarrollo
     const statusDiv = document.createElement('div');
     statusDiv.style.cssText = `
       position: absolute;
@@ -116,13 +161,41 @@ export class Game {
       font-size: 1.2rem;
       text-align: center;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.5);
+      padding: 15px 25px;
+      border-radius: 10px;
     `;
     statusDiv.innerHTML = `
       <h2>🎄 Christmas Cat Game</h2>
-      <p>Setup completado - Three.js funcionando</p>
-      <p style="font-size: 0.9rem; opacity: 0.7;">Fase 1 ✓</p>
+      <p>Fase 2: Assets y Entidades</p>
+      <p style="font-size: 0.9rem; opacity: 0.7;">Usa el mouse para orbitar la cámara</p>
     `;
     this.uiContainer.appendChild(statusDiv);
+  }
+
+  /**
+   * Añadir globos decorativos al árbol
+   */
+  private addOrnaments(): void {
+    if (!this.tree || !this.ornamentPool) return;
+
+    // Añadir globos en algunas ramas
+    for (let level = 1; level < 10; level += 2) {
+      const side = level % 4 < 2 ? 'left' : 'right';
+      const branch = this.tree.getBranch(level, side);
+      
+      if (branch) {
+        const ornament = this.ornamentPool.get();
+        ornament.setPosition(
+          branch.position.x * 0.9,
+          branch.position.y + 0.2,
+          branch.position.z
+        );
+        this.scene.add(ornament.mesh);
+        this.ornaments.push(ornament);
+        branch.hasOrnament = true;
+      }
+    }
   }
 
   /**
@@ -135,11 +208,28 @@ export class Game {
 
     const delta = this.clock.getDelta();
 
-    // Rotar cubo de prueba
-    if (this.testCube) {
-      this.testCube.rotation.x += 0.5 * delta;
-      this.testCube.rotation.y += 0.8 * delta;
+    // Actualizar controles de desarrollo
+    if (this.controls) {
+      this.controls.update();
     }
+
+    // Actualizar entidades
+    if (this.tree) {
+      this.tree.update(delta);
+    }
+
+    if (this.star) {
+      this.star.update(delta);
+    }
+
+    if (this.cat) {
+      this.cat.update(delta);
+    }
+
+    // Actualizar globos
+    this.ornaments.forEach((ornament) => {
+      ornament.update(delta);
+    });
 
     // Renderizar
     this.renderer.render(this.scene, this.camera);
@@ -164,6 +254,16 @@ export class Game {
   destroy(): void {
     this.isRunning = false;
     window.removeEventListener('resize', this.onResize.bind(this));
+    
+    // Limpiar entidades
+    this.tree?.dispose();
+    this.cat?.dispose();
+    this.star?.dispose();
+    this.ornamentPool?.dispose();
+    
+    // Limpiar controles
+    this.controls?.dispose();
+    
     this.renderer.dispose();
   }
 }
