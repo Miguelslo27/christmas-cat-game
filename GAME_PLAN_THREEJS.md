@@ -86,17 +86,18 @@ christmas-cat-game/
 
 ## 📅 Fases de Desarrollo
 
-### **FASE 1: Setup del Proyecto (1 día)** 
+### **FASE 1: Setup del Proyecto (1 día)** ✅ COMPLETADA
 > Semana 1
 
-- [ ] Inicializar proyecto Vite + TypeScript
-- [ ] Configurar Three.js
-- [ ] Configurar ESLint + Prettier
-- [ ] Estructura de carpetas
-- [ ] Setup básico de escena 3D (cubo de prueba)
-- [ ] Verificar que funciona en móvil (navegador)
+- [x] Inicializar proyecto Vite + TypeScript
+- [x] Configurar Three.js
+- [ ] Configurar ESLint + Prettier (omitido por ahora)
+- [x] Estructura de carpetas
+- [x] Setup básico de escena 3D (cubo de prueba)
+- [x] Verificar que funciona en móvil (navegador)
+- [x] First commit + Push a GitHub
 
-**Entregable**: Proyecto corriendo con cubo 3D rotando
+**Entregable**: ✅ Proyecto corriendo con cubo 3D rotando
 
 ---
 
@@ -477,8 +478,8 @@ TOTAL: ~7 semanas para release
 
 - [x] Plan original Unity (referencia)
 - [x] Plan Three.js + Capacitor
-- [ ] **FASE 1**: Setup del Proyecto
-- [ ] **FASE 2**: Assets y Modelos 3D
+- [x] **FASE 1**: Setup del Proyecto ✅
+- [ ] **FASE 2**: Assets y Modelos 3D ← SIGUIENTE
 - [ ] **FASE 3**: Escena Intro
 - [ ] **FASE 4**: Escena Gameplay
 - [ ] **FASE 5**: Mecánicas Core
@@ -496,19 +497,20 @@ TOTAL: ~7 semanas para release
 
 ```bash
 # Desarrollo
-npm run dev          # Servidor desarrollo
-npm run build        # Build producción
-npm run preview      # Preview build
+pnpm dev             # Servidor desarrollo
+pnpm build           # Build producción
+pnpm preview         # Preview build
 
 # Capacitor
-npx cap add android  # Agregar Android
-npx cap add ios      # Agregar iOS
-npx cap sync         # Sincronizar código
-npx cap open android # Abrir Android Studio
-npx cap open ios     # Abrir Xcode
+pnpm cap add android # Agregar Android
+pnpm cap add ios     # Agregar iOS
+pnpm cap sync        # Sincronizar código
+pnpm cap open android# Abrir Android Studio
+pnpm cap open ios    # Abrir Xcode
 ```
 
 ---
 
 > **Última actualización:** 26 de Diciembre, 2025  
-> **Stack**: Three.js + TypeScript + Vite + Capacitor
+> **Stack**: Three.js + TypeScript + Vite + Capacitor  
+> **Repo**: https://github.com/Miguelslo27/christmas-cat-game
