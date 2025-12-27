@@ -3,7 +3,7 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { TreeSide } from '../utils/Constants';
 
 /**
- * Estados de animación del gatito
+ * Cat animation states
  */
 export const CatAnimation = {
   IDLE: 'idle',
@@ -19,37 +19,65 @@ export const CatAnimation = {
 export type CatAnimation = (typeof CatAnimation)[keyof typeof CatAnimation];
 
 /**
- * Clase del gatito protagonista
- * Placeholder con primitivas, se puede reemplazar con modelo GLTF
+ * Cat animation configuration constants
+ */
+const CAT_ANIMATION_CONFIG = {
+  /** Probability of blinking per frame (at 60fps ~7% chance per second) */
+  BLINK_PROBABILITY: 0.002,
+  /** Duration of blink animation in seconds */
+  BLINK_DURATION: 0.1,
+  /** Tail wag speed */
+  TAIL_WAG_SPEED: 5,
+  /** Tail wag amplitude */
+  TAIL_WAG_AMPLITUDE: 0.3,
+  /** Breathing animation speed */
+  BREATHE_SPEED: 2,
+  /** Breathing scale amplitude */
+  BREATHE_AMPLITUDE: 0.02,
+};
+
+/**
+ * Main cat protagonist class
+ * Placeholder with primitives, can be replaced with GLTF model
  */
 export class Cat {
   public mesh: THREE.Group;
   
-  // Estado actual
+  // Current state
   public currentLevel: number = 0;
   public currentSide: TreeSide = TreeSide.CENTER;
   public currentAnimation: CatAnimation = CatAnimation.IDLE;
   
-  // Componentes del placeholder
+  // Placeholder components
   private body: THREE.Mesh;
   private head: THREE.Mesh;
   private ears: THREE.Group;
   private tail: THREE.Mesh;
   private eyes: THREE.Group;
   
-  // Animación
+  // Animation
   private mixer: THREE.AnimationMixer | null = null;
   private time: number = 0;
+  private blinkTimer: number = 0;
+  private isBlinking: boolean = false;
+  private eyeOriginalScales: Map<THREE.Object3D, number> = new Map();
 
-  // Flag para saber si usamos modelo real o placeholder
+  // GLTF model reference for proper disposal
+  private gltfModel: THREE.Object3D | null = null;
+
+  // Flag to know if using real model or placeholder
   private isPlaceholder: boolean = true;
+
+  // Store original positions for animation reset
+  private originalHeadX: number = 0.6;
+  private originalMeshY: number = 0;
 
   constructor() {
     this.mesh = new THREE.Group();
     this.mesh.name = 'Cat';
     this.mesh.scale.setScalar(0.5);
 
-    // Crear placeholder
+    // Create placeholder
     this.body = this.createBody();
     this.head = this.createHead();
     this.ears = this.createEars();
@@ -61,24 +89,46 @@ export class Cat {
     this.mesh.add(this.ears);
     this.mesh.add(this.tail);
     this.mesh.add(this.eyes);
+
+    // Store original positions
+    this.originalHeadX = this.head.position.x;
+    this.originalMeshY = this.mesh.position.y;
+
+    // Cache eye scales for blink animation
+    this.cacheEyeScales();
   }
 
   /**
-   * Cargar modelo GLTF real
+   * Cache eye original scales for blink animation
+   */
+  private cacheEyeScales(): void {
+    this.eyes.children.forEach((child) => {
+      if ((child as THREE.Mesh).geometry instanceof THREE.SphereGeometry) {
+        this.eyeOriginalScales.set(child, child.scale.y);
+      }
+    });
+  }
+
+  /**
+   * Load real GLTF model
    */
   loadFromGLTF(gltf: GLTF): void {
-    // Limpiar placeholder
+    // Dispose placeholder geometries and materials
+    this.disposePlaceholder();
+    
+    // Remove placeholder meshes from group
     this.mesh.remove(this.body, this.head, this.ears, this.tail, this.eyes);
     
-    // Agregar modelo real
+    // Add real model
     const model = gltf.scene.clone();
     model.scale.setScalar(0.5);
     this.mesh.add(model);
+    this.gltfModel = model;
 
-    // Configurar animaciones si existen
+    // Configure animations if they exist
     if (gltf.animations.length > 0) {
       this.mixer = new THREE.AnimationMixer(model);
-      // Reproducir animación idle por defecto
+      // Play idle animation by default
       const idleClip = gltf.animations.find(
         (clip) => clip.name.toLowerCase().includes('idle')
       );
@@ -90,14 +140,14 @@ export class Cat {
     this.isPlaceholder = false;
   }
 
-  // === CREACIÓN DEL PLACEHOLDER ===
+  // === PLACEHOLDER CREATION ===
 
   private createBody(): THREE.Mesh {
     const geometry = new THREE.CapsuleGeometry(0.4, 0.8, 8, 16);
     geometry.rotateZ(Math.PI / 2);
     
     const material = new THREE.MeshStandardMaterial({
-      color: 0xff8c00, // Naranja
+      color: 0xff8c00, // Orange
       roughness: 0.8,
       metalness: 0.1,
     });
@@ -133,19 +183,19 @@ export class Cat {
       roughness: 0.8,
     });
 
-    // Oreja izquierda
+    // Left ear
     const leftEar = new THREE.Mesh(earGeometry, earMaterial);
     leftEar.position.set(0.65, 1.05, -0.15);
     leftEar.rotation.z = -0.2;
     group.add(leftEar);
 
-    // Oreja derecha
+    // Right ear
     const rightEar = new THREE.Mesh(earGeometry, earMaterial);
     rightEar.position.set(0.65, 1.05, 0.15);
     rightEar.rotation.z = -0.2;
     group.add(rightEar);
 
-    // Interior rosa
+    // Pink interior
     const innerEarGeometry = new THREE.ConeGeometry(0.06, 0.15, 4);
     const innerEarMaterial = new THREE.MeshStandardMaterial({
       color: 0xffb6c1,
@@ -166,7 +216,7 @@ export class Cat {
   }
 
   private createTail(): THREE.Mesh {
-    // Cola usando un tubo curvo
+    // Tail using a curved tube
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(-0.6, 0.5, 0),
       new THREE.Vector3(-0.9, 0.7, 0),
@@ -204,7 +254,7 @@ export class Cat {
     rightEye.position.set(0.9, 0.75, 0.12);
     group.add(rightEye);
 
-    // Pupilas
+    // Pupils
     const pupilGeometry = new THREE.SphereGeometry(0.04, 16, 16);
     const pupilMaterial = new THREE.MeshStandardMaterial({
       color: 0x000000,
@@ -219,7 +269,7 @@ export class Cat {
     rightPupil.position.set(0.96, 0.75, 0.12);
     group.add(rightPupil);
 
-    // Nariz
+    // Nose
     const noseGeometry = new THREE.SphereGeometry(0.05, 8, 8);
     const noseMaterial = new THREE.MeshStandardMaterial({
       color: 0xff69b4,
@@ -233,21 +283,39 @@ export class Cat {
     return group;
   }
 
-  // === ANIMACIONES ===
+  // === ANIMATIONS ===
 
   /**
-   * Reproducir animación
+   * Play animation
    */
   playAnimation(animation: CatAnimation): void {
+    // Reset positions when changing animation
+    this.resetAnimationState();
+    
     this.currentAnimation = animation;
 
     if (!this.isPlaceholder && this.mixer) {
-      // TODO: Mapear animación a clip real cuando tengamos modelo
+      // TODO: Map animation to real clip when we have a model
     }
   }
 
   /**
-   * Actualizar animaciones
+   * Reset animation state to default positions
+   */
+  private resetAnimationState(): void {
+    // Reset head position
+    this.head.position.x = this.originalHeadX;
+    this.head.rotation.y = 0;
+    
+    // Reset mesh position
+    this.mesh.position.y = this.originalMeshY;
+    
+    // Reset tail
+    this.tail.rotation.x = 0;
+  }
+
+  /**
+   * Update animations
    */
   update(deltaTime: number): void {
     this.time += deltaTime;
@@ -260,70 +328,88 @@ export class Cat {
   }
 
   /**
-   * Animaciones del placeholder
+   * Placeholder animations
    */
-  private updatePlaceholderAnimation(_deltaTime: number): void {
-    // Animación de cola
-    const tailWag = Math.sin(this.time * 5) * 0.3;
+  private updatePlaceholderAnimation(deltaTime: number): void {
+    // Tail animation
+    const tailWag = Math.sin(this.time * CAT_ANIMATION_CONFIG.TAIL_WAG_SPEED) * CAT_ANIMATION_CONFIG.TAIL_WAG_AMPLITUDE;
     this.tail.rotation.z = tailWag;
     this.tail.rotation.y = Math.sin(this.time * 3) * 0.2;
 
-    // Respiración (cuerpo sube y baja)
-    const breathe = Math.sin(this.time * 2) * 0.02;
+    // Breathing (body rises and falls)
+    const breathe = Math.sin(this.time * CAT_ANIMATION_CONFIG.BREATHE_SPEED) * CAT_ANIMATION_CONFIG.BREATHE_AMPLITUDE;
     this.body.scale.y = 1 + breathe;
 
-    // Parpadeo ocasional
-    if (Math.random() < 0.002) {
-      this.blink();
-    }
+    // Time-based blinking (replaces Math.random() with timer)
+    this.updateBlink(deltaTime);
 
-    // Animaciones específicas
+    // Specific animations
     switch (this.currentAnimation) {
       case CatAnimation.IDLE:
-        // Movimiento sutil de la cabeza
+        // Subtle head movement
         this.head.rotation.y = Math.sin(this.time * 0.5) * 0.1;
         break;
 
       case CatAnimation.SNIFF:
-        // Cabeza moviéndose como olfateando
+        // Head moving as if sniffing
         this.head.rotation.y = Math.sin(this.time * 4) * 0.2;
-        this.head.position.x = 0.6 + Math.sin(this.time * 3) * 0.05;
+        this.head.position.x = this.originalHeadX + Math.sin(this.time * 3) * 0.05;
         break;
 
       case CatAnimation.PREPARE_JUMP:
-        // Agacharse
-        this.mesh.position.y = -0.1;
+        // Crouch down
+        this.mesh.position.y = this.originalMeshY - 0.1;
         this.tail.rotation.x = 0.3;
         break;
     }
   }
 
   /**
-   * Efecto de parpadeo
+   * Update blink animation using time-based approach
    */
-  private blink(): void {
-    const eyes = this.eyes.children.filter((c) => 
-      (c as THREE.Mesh).geometry instanceof THREE.SphereGeometry
-    );
+  private updateBlink(deltaTime: number): void {
+    if (this.isBlinking) {
+      this.blinkTimer += deltaTime;
+      
+      if (this.blinkTimer >= CAT_ANIMATION_CONFIG.BLINK_DURATION) {
+        // End blink - restore eye scales
+        this.eyeOriginalScales.forEach((originalScale, eye) => {
+          eye.scale.y = originalScale;
+        });
+        this.isBlinking = false;
+        this.blinkTimer = 0;
+      }
+    } else {
+      // Check if we should blink (using probability per frame)
+      if (Math.random() < CAT_ANIMATION_CONFIG.BLINK_PROBABILITY) {
+        this.startBlink();
+      }
+    }
+  }
+
+  /**
+   * Start blink animation
+   */
+  private startBlink(): void {
+    this.isBlinking = true;
+    this.blinkTimer = 0;
     
-    eyes.forEach((eye) => {
-      const originalScale = eye.scale.y;
+    // Squash eyes
+    this.eyeOriginalScales.forEach((_, eye) => {
       eye.scale.y = 0.1;
-      setTimeout(() => {
-        eye.scale.y = originalScale;
-      }, 100);
     });
   }
 
   /**
-   * Establecer posición del gato
+   * Set cat position
    */
   setPosition(x: number, y: number, z: number): void {
     this.mesh.position.set(x, y, z);
+    this.originalMeshY = y;
   }
 
   /**
-   * Mirar hacia un lado
+   * Look towards a side
    */
   lookAt(side: 'left' | 'right' | 'forward'): void {
     switch (side) {
@@ -340,28 +426,61 @@ export class Cat {
   }
 
   /**
-   * Limpiar recursos
+   * Dispose placeholder resources
+   */
+  private disposePlaceholder(): void {
+    [this.body, this.head, this.tail].forEach((mesh) => {
+      mesh.geometry.dispose();
+      (mesh.material as THREE.Material).dispose();
+    });
+
+    this.ears.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        (child.material as THREE.Material).dispose();
+      }
+    });
+
+    this.eyes.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        (child.material as THREE.Material).dispose();
+      }
+    });
+  }
+
+  /**
+   * Dispose GLTF model resources
+   */
+  private disposeGLTFModel(): void {
+    if (!this.gltfModel) return;
+
+    this.gltfModel.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        if (Array.isArray(child.material)) {
+          child.material.forEach((mat) => mat.dispose());
+        } else {
+          child.material.dispose();
+        }
+      }
+    });
+  }
+
+  /**
+   * Cleanup resources
    */
   dispose(): void {
     if (this.isPlaceholder) {
-      [this.body, this.head, this.tail].forEach((mesh) => {
-        mesh.geometry.dispose();
-        (mesh.material as THREE.Material).dispose();
-      });
+      this.disposePlaceholder();
+    } else {
+      this.disposeGLTFModel();
+    }
 
-      this.ears.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.geometry.dispose();
-          (child.material as THREE.Material).dispose();
-        }
-      });
-
-      this.eyes.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.geometry.dispose();
-          (child.material as THREE.Material).dispose();
-        }
-      });
+    // Stop animation mixer
+    if (this.mixer) {
+      this.mixer.stopAllAction();
+      this.mixer = null;
     }
   }
 }

@@ -37,8 +37,8 @@ export interface LoadedAssets {
 export type ProgressCallback = (loaded: number, total: number, assetName: string) => void;
 
 /**
- * AssetLoader - Sistema centralizado de carga de assets
- * Soporta modelos GLTF/GLB, texturas, audio y más
+ * AssetLoader - Centralized asset loading system
+ * Supports GLTF/GLB models, textures, audio and more
  */
 export class AssetLoader {
   private textureLoader: THREE.TextureLoader;
@@ -57,25 +57,28 @@ export class AssetLoader {
   private loadingManager: THREE.LoadingManager;
   private onProgressCallback: ProgressCallback | null = null;
 
-  constructor() {
-    // Loading manager para trackear progreso
+  /** Default DRACO decoder CDN path */
+  static readonly DEFAULT_DRACO_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/';
+
+  constructor(dracoDecoderPath?: string) {
+    // Loading manager to track progress
     this.loadingManager = new THREE.LoadingManager();
 
     // Texture loader
     this.textureLoader = new THREE.TextureLoader(this.loadingManager);
 
-    // GLTF loader con Draco compression
+    // GLTF loader with Draco compression
     this.gltfLoader = new GLTFLoader(this.loadingManager);
     this.dracoLoader = new DRACOLoader();
-    this.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+    this.dracoLoader.setDecoderPath(dracoDecoderPath ?? AssetLoader.DEFAULT_DRACO_PATH);
     this.gltfLoader.setDRACOLoader(this.dracoLoader);
 
-    // Cube texture loader (para environment maps)
+    // Cube texture loader (for environment maps)
     this.cubeTextureLoader = new THREE.CubeTextureLoader(this.loadingManager);
   }
 
   /**
-   * Cargar una lista de assets
+   * Load a list of assets
    */
   async loadAssets(
     assets: AssetDefinition[],
@@ -94,6 +97,11 @@ export class AssetLoader {
           this.onProgressCallback(loaded, total, asset.name);
         }
       } catch (error) {
+        // Still count failed assets in progress
+        loaded++;
+        if (this.onProgressCallback) {
+          this.onProgressCallback(loaded, total, asset.name);
+        }
         console.error(`Error loading asset: ${asset.name}`, error);
         throw error;
       }
@@ -105,7 +113,7 @@ export class AssetLoader {
   }
 
   /**
-   * Cargar un asset individual
+   * Load a single asset
    */
   private async loadAsset(asset: AssetDefinition): Promise<void> {
     switch (asset.type) {
@@ -125,18 +133,19 @@ export class AssetLoader {
   }
 
   /**
-   * Cargar una textura
+   * Load a texture
    */
   private loadTexture(asset: AssetDefinition): Promise<THREE.Texture> {
     return new Promise((resolve, reject) => {
       this.textureLoader.load(
         asset.path,
         (texture) => {
-          // Aplicar opciones
+          // Apply options
           if (asset.options?.flipY !== undefined) {
             texture.flipY = asset.options.flipY;
           }
-          texture.colorSpace = THREE.SRGBColorSpace;
+          // Use colorSpace option or default to SRGB
+          texture.colorSpace = asset.options?.colorSpace ?? THREE.SRGBColorSpace;
           
           this.loadedAssets.textures.set(asset.name, texture);
           resolve(texture);
@@ -148,14 +157,14 @@ export class AssetLoader {
   }
 
   /**
-   * Cargar un modelo GLTF/GLB
+   * Load a GLTF/GLB model
    */
   private loadModel(asset: AssetDefinition): Promise<GLTF> {
     return new Promise((resolve, reject) => {
       this.gltfLoader.load(
         asset.path,
         (gltf) => {
-          // Configurar sombras en todos los meshes
+          // Configure shadows on all meshes
           gltf.scene.traverse((child) => {
             if (child instanceof THREE.Mesh) {
               child.castShadow = true;
@@ -173,7 +182,7 @@ export class AssetLoader {
   }
 
   /**
-   * Cargar audio
+   * Load audio
    */
   private async loadAudio(asset: AssetDefinition): Promise<AudioBuffer> {
     if (!this.audioContext) {
@@ -189,11 +198,11 @@ export class AssetLoader {
   }
 
   /**
-   * Cargar cube texture (environment map)
+   * Load cube texture (environment map)
    */
   private loadCubeTexture(asset: AssetDefinition): Promise<THREE.CubeTexture> {
     return new Promise((resolve, reject) => {
-      // Asume que el path es un array de 6 imágenes [px, nx, py, ny, pz, nz]
+      // Assumes the path is a directory with 6 images [px, nx, py, ny, pz, nz]
       const paths = [
         `${asset.path}/px.jpg`,
         `${asset.path}/nx.jpg`,
@@ -216,35 +225,35 @@ export class AssetLoader {
   }
 
   /**
-   * Obtener una textura cargada
+   * Get a loaded texture
    */
   getTexture(name: string): THREE.Texture | undefined {
     return this.loadedAssets.textures.get(name);
   }
 
   /**
-   * Obtener un modelo cargado
+   * Get a loaded model
    */
   getModel(name: string): GLTF | undefined {
     return this.loadedAssets.models.get(name);
   }
 
   /**
-   * Obtener audio cargado
+   * Get loaded audio
    */
   getAudio(name: string): AudioBuffer | undefined {
     return this.loadedAssets.audio.get(name);
   }
 
   /**
-   * Obtener cube texture cargada
+   * Get loaded cube texture
    */
   getCubeTexture(name: string): THREE.CubeTexture | undefined {
     return this.loadedAssets.cubeTextures.get(name);
   }
 
   /**
-   * Clonar un modelo (útil para instanciar múltiples copias)
+   * Clone a model (useful for instantiating multiple copies)
    */
   cloneModel(name: string): THREE.Group | undefined {
     const gltf = this.loadedAssets.models.get(name);
@@ -255,7 +264,7 @@ export class AssetLoader {
   }
 
   /**
-   * Limpiar todos los assets cargados
+   * Cleanup all loaded assets
    */
   dispose(): void {
     // Dispose textures

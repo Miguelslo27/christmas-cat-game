@@ -1,34 +1,34 @@
 /**
- * Constantes de configuración del juego
+ * Game configuration constants
  */
 
-// Configuración del juego
+// Game configuration
 export const GAME_CONFIG = {
-  // Mecánicas
+  // Mechanics
   TOTAL_BRANCHES: 12,
-  TIME_LIMIT: 60, // segundos
-  ORNAMENTS_PER_LEVEL: 1, // aumenta con altura
+  TIME_LIMIT: 60, // seconds
+  ORNAMENTS_PER_LEVEL: 1, // increases with height
 
-  // Equilibrio
+  // Balance
   BALANCE_MAX: 100,
   BALANCE_ORNAMENT_FALL: 15,
   BALANCE_VERTICAL_PENALTY: 20,
-  BALANCE_RECOVERY_RATE: 2, // por segundo
+  BALANCE_RECOVERY_RATE: 2, // per second
   BALANCE_SAFE_ZONE: 30,
   CONSECUTIVE_VERTICAL_LIMIT: 3,
 
-  // Puntuación
+  // Scoring
   POINTS_PER_BRANCH: 100,
   POINTS_SPEED_BONUS_MAX: 500,
   POINTS_PERFECT_BALANCE_BONUS: 50,
   POINTS_NEAR_FALL_PENALTY: 25,
   COMBO_MULTIPLIER: 1.5,
-  COMBO_THRESHOLD: 5, // ramas sin error
+  COMBO_THRESHOLD: 5, // branches without error
 } as const;
 
-// Configuración visual
+// Visual configuration
 export const VISUAL_CONFIG = {
-  // Colores navideños
+  // Christmas colors
   COLORS: {
     TREE_GREEN: 0x1a472a,
     TREE_GREEN_LIGHT: 0x2d5a3d,
@@ -43,7 +43,7 @@ export const VISUAL_CONFIG = {
     LIGHT_COOL: 0x55aaff,
   },
 
-  // Cámara
+  // Camera
   CAMERA: {
     FOV: 75,
     NEAR: 0.1,
@@ -53,11 +53,11 @@ export const VISUAL_CONFIG = {
   },
 } as const;
 
-// Configuración de controles
+// Controls configuration
 export const CONTROLS_CONFIG = {
   // Touch
-  SWIPE_THRESHOLD: 50, // píxeles mínimos para detectar swipe
-  SWIPE_TIMEOUT: 300, // ms máximo para un swipe
+  SWIPE_THRESHOLD: 50, // minimum pixels to detect swipe
+  SWIPE_TIMEOUT: 300, // max ms for a swipe
 
   // Keyboard
   KEYS: {
@@ -69,7 +69,7 @@ export const CONTROLS_CONFIG = {
   },
 } as const;
 
-// Estados del juego
+// Game states
 export const GameState = {
   LOADING: 'loading',
   INTRO: 'intro',
@@ -81,7 +81,7 @@ export const GameState = {
 } as const;
 export type GameState = (typeof GameState)[keyof typeof GameState];
 
-// Lados del árbol
+// Tree sides
 export const TreeSide = {
   LEFT: 'left',
   RIGHT: 'right',
@@ -89,11 +89,11 @@ export const TreeSide = {
 } as const;
 export type TreeSide = (typeof TreeSide)[keyof typeof TreeSide];
 
-// Razones de game over
+// Game over reasons
 export const GameOverReason = {
-  FELL_OFF: 'fell_off', // Cayó del árbol
-  TIME_UP: 'time_up', // Se acabó el tiempo
-  LOST_BALANCE: 'lost_balance', // Perdió el equilibrio
-  WRONG_MOVE: 'wrong_move', // Movimiento inválido
+  FELL_OFF: 'fell_off', // Fell off the tree
+  TIME_UP: 'time_up', // Time ran out
+  LOST_BALANCE: 'lost_balance', // Lost balance
+  WRONG_MOVE: 'wrong_move', // Invalid move
 } as const;
 export type GameOverReason = (typeof GameOverReason)[keyof typeof GameOverReason];

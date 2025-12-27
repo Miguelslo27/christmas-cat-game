@@ -1,60 +1,60 @@
 import * as THREE from 'three';
 
 /**
- * Funciones de utilidad
+ * Utility functions
  */
 
 /**
- * Genera un número aleatorio entre min y max (inclusive)
+ * Generate a random number between min and max (inclusive)
  */
 export function randomRange(min: number, max: number): number {
   return Math.random() * (max - min) + min;
 }
 
 /**
- * Genera un entero aleatorio entre min y max (inclusive)
+ * Generate a random integer between min and max (inclusive)
  */
 export function randomInt(min: number, max: number): number {
   return Math.floor(randomRange(min, max + 1));
 }
 
 /**
- * Selecciona un elemento aleatorio de un array
+ * Select a random element from an array
  */
 export function randomChoice<T>(array: T[]): T {
   return array[randomInt(0, array.length - 1)];
 }
 
 /**
- * Clamp un valor entre min y max
+ * Clamp a value between min and max
  */
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
 /**
- * Lerp (interpolación lineal)
+ * Lerp (linear interpolation)
  */
 export function lerp(start: number, end: number, t: number): number {
   return start + (end - start) * t;
 }
 
 /**
- * Convierte grados a radianes
+ * Convert degrees to radians
  */
 export function degToRad(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
 /**
- * Convierte radianes a grados
+ * Convert radians to degrees
  */
 export function radToDeg(radians: number): number {
   return radians * (180 / Math.PI);
 }
 
 /**
- * Formatea segundos a mm:ss
+ * Format seconds to mm:ss
  */
 export function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -63,14 +63,14 @@ export function formatTime(seconds: number): string {
 }
 
 /**
- * Formatea puntuación con separadores de miles
+ * Format score with thousands separators
  */
 export function formatScore(score: number): string {
   return score.toLocaleString();
 }
 
 /**
- * Crea un color aleatorio de la paleta navideña
+ * Create a random color from Christmas palette
  */
 export function randomChristmasColor(): number {
   const colors = [0xff0000, 0x00ff00, 0xffd700, 0x0066cc, 0xc0c0c0, 0x9932cc];
@@ -78,14 +78,14 @@ export function randomChristmasColor(): number {
 }
 
 /**
- * Detecta si es un dispositivo táctil
+ * Detect if device has touch capability
  */
 export function isTouchDevice(): boolean {
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 }
 
 /**
- * Detecta si es un dispositivo móvil
+ * Detect if device is mobile
  */
 export function isMobile(): boolean {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
@@ -94,7 +94,7 @@ export function isMobile(): boolean {
 }
 
 /**
- * Crea una geometría de estrella
+ * Create a star geometry shape
  */
 export function createStarGeometry(
   outerRadius: number = 1,
@@ -121,7 +121,7 @@ export function createStarGeometry(
 }
 
 /**
- * Espera un tiempo determinado
+ * Wait for a specified time
  */
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));

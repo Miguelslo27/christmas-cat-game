@@ -6,8 +6,8 @@ import { Star } from './entities/Star';
 import { Ornament, OrnamentPool } from './entities/Ornament';
 
 /**
- * Clase principal del juego
- * Maneja el ciclo de vida, renderer y escenas
+ * Main game class
+ * Handles lifecycle, renderer and scenes
  */
 export class Game {
   private container: HTMLElement;
@@ -18,8 +18,9 @@ export class Game {
   private clock: THREE.Clock;
   private isRunning: boolean = false;
   private controls: OrbitControls | null = null;
+  private boundOnResize: () => void;
 
-  // Entidades del juego
+  // Game entities
   private tree: ChristmasTree | null = null;
   private cat: Cat | null = null;
   private star: Star | null = null;
@@ -59,31 +60,32 @@ export class Game {
     this.camera.position.set(0, 6, 12);
     this.camera.lookAt(0, 5, 0);
 
-    // Manejar resize
-    window.addEventListener('resize', this.onResize.bind(this));
+    // Store bound resize handler to properly remove later
+    this.boundOnResize = this.onResize.bind(this);
+    window.addEventListener('resize', this.boundOnResize);
   }
 
   /**
-   * Inicializar el juego
+   * Initialize the game
    */
   async init(): Promise<void> {
-    console.log('🎄 Iniciando Christmas Cat Game...');
+    console.log('🎄 Starting Christmas Cat Game...');
 
-    // Crear escena con entidades
+    // Create scene with entities
     this.createGameScene();
 
-    // Agregar controles de órbita para desarrollo
+    // Add orbit controls for development
     this.setupDevControls();
 
-    // Iniciar loop de renderizado
+    // Start render loop
     this.isRunning = true;
     this.animate();
 
-    console.log('✅ Juego inicializado correctamente');
+    console.log('✅ Game initialized successfully');
   }
 
   /**
-   * Configurar controles de desarrollo (OrbitControls)
+   * Setup development controls (OrbitControls)
    */
   private setupDevControls(): void {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -94,14 +96,14 @@ export class Game {
   }
 
   /**
-   * Crear escena principal del juego con todas las entidades
+   * Create main game scene with all entities
    */
   private createGameScene(): void {
-    // Luz ambiental
+    // Ambient light
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     this.scene.add(ambientLight);
 
-    // Luz direccional principal
+    // Main directional light
     const directionalLight = new THREE.DirectionalLight(0xfff5e6, 1);
     directionalLight.position.set(5, 15, 10);
     directionalLight.castShadow = true;
@@ -109,14 +111,22 @@ export class Game {
     directionalLight.shadow.mapSize.height = 2048;
     directionalLight.shadow.camera.near = 0.5;
     directionalLight.shadow.camera.far = 50;
+    // Configure shadow camera bounds to cover floor and tree area
+    const shadowCam = directionalLight.shadow.camera as THREE.OrthographicCamera;
+    const shadowExtent = 12;
+    shadowCam.left = -shadowExtent;
+    shadowCam.right = shadowExtent;
+    shadowCam.top = shadowExtent;
+    shadowCam.bottom = -shadowExtent;
+    shadowCam.updateProjectionMatrix();
     this.scene.add(directionalLight);
 
-    // Luz de relleno
+    // Fill light
     const fillLight = new THREE.DirectionalLight(0x88ccff, 0.3);
     fillLight.position.set(-5, 5, -5);
     this.scene.add(fillLight);
 
-    // Suelo
+    // Floor
     const floorGeometry = new THREE.PlaneGeometry(20, 20);
     const floorMaterial = new THREE.MeshStandardMaterial({
       color: 0x2d1810,
@@ -127,17 +137,17 @@ export class Game {
     floor.receiveShadow = true;
     this.scene.add(floor);
 
-    // Crear árbol de navidad
+    // Create Christmas tree
     this.tree = new ChristmasTree();
     this.scene.add(this.tree.mesh);
 
-    // Crear estrella en la cima
+    // Create star at the top
     this.star = new Star();
     const topPos = this.tree.getTopPosition();
     this.star.setPosition(topPos.x, topPos.y + 0.5, topPos.z);
     this.scene.add(this.star.mesh);
 
-    // Crear gatito
+    // Create cat
     this.cat = new Cat();
     const startPos = this.tree.getCatPosition(0, 'left');
     if (startPos) {
@@ -146,11 +156,11 @@ export class Game {
     this.cat.lookAt('right');
     this.scene.add(this.cat.mesh);
 
-    // Crear pool de globos y añadir algunos
+    // Create ornament pool and add some ornaments
     this.ornamentPool = new OrnamentPool();
     this.addOrnaments();
 
-    // UI de desarrollo
+    // Development UI
     const statusDiv = document.createElement('div');
     statusDiv.style.cssText = `
       position: absolute;
@@ -167,19 +177,19 @@ export class Game {
     `;
     statusDiv.innerHTML = `
       <h2>🎄 Christmas Cat Game</h2>
-      <p>Fase 2: Assets y Entidades</p>
-      <p style="font-size: 0.9rem; opacity: 0.7;">Usa el mouse para orbitar la cámara</p>
+      <p>Phase 2: Assets and Entities</p>
+      <p style="font-size: 0.9rem; opacity: 0.7;">Use mouse to orbit camera</p>
     `;
     this.uiContainer.appendChild(statusDiv);
   }
 
   /**
-   * Añadir globos decorativos al árbol
+   * Add decorative ornaments to tree
    */
   private addOrnaments(): void {
     if (!this.tree || !this.ornamentPool) return;
 
-    // Añadir globos en algunas ramas
+    // Add ornaments on some branches
     for (let level = 1; level < 10; level += 2) {
       const side = level % 4 < 2 ? 'left' : 'right';
       const branch = this.tree.getBranch(level, side);
@@ -199,7 +209,7 @@ export class Game {
   }
 
   /**
-   * Loop principal de animación
+   * Main animation loop
    */
   private animate(): void {
     if (!this.isRunning) return;
@@ -208,12 +218,12 @@ export class Game {
 
     const delta = this.clock.getDelta();
 
-    // Actualizar controles de desarrollo
+    // Update dev controls
     if (this.controls) {
       this.controls.update();
     }
 
-    // Actualizar entidades
+    // Update entities
     if (this.tree) {
       this.tree.update(delta);
     }
@@ -226,17 +236,25 @@ export class Game {
       this.cat.update(delta);
     }
 
-    // Actualizar globos
-    this.ornaments.forEach((ornament) => {
+    // Update ornaments and remove those out of bounds
+    this.ornaments = this.ornaments.filter((ornament) => {
       ornament.update(delta);
+      
+      // Remove and recycle ornaments that fall below floor
+      if (ornament.mesh.position.y < -5) {
+        this.scene.remove(ornament.mesh);
+        this.ornamentPool?.release(ornament);
+        return false;
+      }
+      return true;
     });
 
-    // Renderizar
+    // Render
     this.renderer.render(this.scene, this.camera);
   }
 
   /**
-   * Manejar cambio de tamaño de ventana
+   * Handle window resize
    */
   private onResize(): void {
     const width = window.innerWidth;
@@ -249,19 +267,19 @@ export class Game {
   }
 
   /**
-   * Destruir el juego y limpiar recursos
+   * Destroy game and cleanup resources
    */
   destroy(): void {
     this.isRunning = false;
-    window.removeEventListener('resize', this.onResize.bind(this));
+    window.removeEventListener('resize', this.boundOnResize);
     
-    // Limpiar entidades
+    // Cleanup entities
     this.tree?.dispose();
     this.cat?.dispose();
     this.star?.dispose();
     this.ornamentPool?.dispose();
     
-    // Limpiar controles
+    // Cleanup controls
     this.controls?.dispose();
     
     this.renderer.dispose();
